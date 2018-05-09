@@ -14,7 +14,6 @@ import glob
 import time
 
 
-
 def load_training_data():
 	# load data from training data set
 	car_images = glob.glob('training_dataset/car/*.png')
@@ -108,6 +107,9 @@ def extract_hog_features(imgs, cspace='RGB', orient=9, pix_per_cell=8, cell_per_
 			# 	pix_per_cell, cell_per_block, vis=False, feature_vec=True)
 		# append the feature vector to the features list
 		features.append(hog_features)
+		# Scale the feature vector
+		# X_scaler = StandardScaler().fit(features)
+		# scaled_X = X_scaler.transform(features)
 	# return list of feature vectors
 	return features
 
@@ -140,8 +142,8 @@ def train_classifier(X_train, y_train):
 	return svc
 
 
-def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, X_scaler, orient, 
-	pix_per_cell, cell_per_block, spatial_size, hist_bins, show_all_rectangles=False):
+def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, orient, 
+	pix_per_cell, cell_per_block):
 	# define an array of rectangles where cars were detected
 	rectangles = []
 	img = img.astype(np.float32)/255
@@ -176,13 +178,14 @@ def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, X_scaler, o
 	nyblocks = (ch1.shape[0] // pix_per_cell)+1 
 	nfeat_per_block = orient*cell_per_block**2
 
+	# define window size
 	window = 64
 	nblocks_per_window = (window // pix_per_cell)-1 
-	cells_per_step = 2  # Instead of overlap, define how many cells to step
+	cells_per_step = 2  
 	nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
 	nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
-	# Compute individual channel HOG features for the entire image
+	# compute individual channel HOG features for the entire image
 	hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)   
 	if hog_channel == 'ALL':
 		hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
@@ -192,26 +195,26 @@ def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, X_scaler, o
 		for yb in range(nysteps):
 			ypos = yb*cells_per_step
 			xpos = xb*cells_per_step
-			# Extract HOG for this patch
-			hog_feat1 = hog1[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel()
+			# extract HOG feature for this patch
+			hog_feature = hog1[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel()
 			if hog_channel == 'ALL':
 				hog_feat2 = hog2[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
 				hog_feat3 = hog3[ypos:ypos+nblocks_per_window, xpos:xpos+nblocks_per_window].ravel() 
-				hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
+				hog_features = np.hstack((hog_feature, hog_feat2, hog_feat3))
 			else:
-				hog_features = hog_feat1
+				hog_features = hog_feature
 
 			xleft = xpos*pix_per_cell
 			ytop = ypos*pix_per_cell
-
+			# make the prediction
 			test_prediction = svc.predict([hog_features])
-
-			if test_prediction[0] == 1 or show_all_rectangles:
+			# if the window is predicted to be have car, append the coordinates of rectangle to rectangles
+			if test_prediction[0] == 1:
 				xbox_left = np.int(xleft*scale)
 				ytop_draw = np.int(ytop*scale)
 				win_draw = np.int(window*scale)
 				rectangles.append(((xbox_left, ytop_draw+ystart),(xbox_left+win_draw,ytop_draw+win_draw+ystart)))
-
+	# return coordinates of all detected rectangles
 	return rectangles
 
 
@@ -225,20 +228,16 @@ def draw_boxes(img, bboxes, color=(0, 255, 0), thick=3):
 		if color == 'random' or random_color:
 			color = (np.random.randint(0,255), np.random.randint(0,255), np.random.randint(0,255))
 			random_color = True
-		# Draw a rectangle given bbox coordinates
+		# draw a rectangle given bbox coordinates
 		cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
-	# Return the image copy with boxes drawn
+	# return the image with bounding box 
 	return imcopy
 
 
 def add_heat(heatmap, bbox_list):
-	# Iterate through list of bboxes
 	for box in bbox_list:
-		# Add += 1 for all pixels inside each bbox
-		# Assuming each "box" takes the form ((x1, y1), (x2, y2))
+		# ddd += 1 for all pixels inside each bbox
 		heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
-
-	# Return updated heatmap
 	return heatmap
 
 def apply_threshold(heatmap, threshold):
@@ -265,9 +264,96 @@ def draw_labeled_bboxes(img, labels):
     # Return the image and final rectangles
     return img, rects
 
+
+def process_pipeline(img):
+	# define pipeline parameters
+	cspace = 'YUV'
+	orient = 9
+	pix_per_cell = 8
+	cell_per_block = 2
+	hog_channel = 'ALL'
+	rectangles = []
+
+	# Small sliding window range
+	ystart = 400
+	ystop = 464
+	scale = 1.0
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Small sliding window range
+	ystart = 416
+	ystop = 480
+	scale = 1.0
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Medium sliding window range
+	ystart = 400
+	ystop = 496
+	scale = 1.5
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Medium sliding window range
+	ystart = 432
+	ystop = 528
+	scale = 1.5
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Big sliding window range
+	ystart = 400
+	ystop = 528
+	scale = 2.0
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Big sliding window range
+	ystart = 432
+	ystop = 560
+	scale = 2.0
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Bigger sliding window range
+	ystart = 400
+	ystop = 596
+	scale = 3.5
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+	# Bigger sliding window range
+	ystart = 464
+	ystop = 660
+	scale = 3.5
+	rectangles.append(detect_cars(img=img, ystart=ystart, ystop=ystop, scale=scale, cspace=cspace, hog_channel=hog_channel, svc=svc, 
+	                       orient=orient, pix_per_cell=pix_per_cell, cell_per_block=cell_per_block))
+
+	# reformat rectangles into a list
+	rectangles = [item for sublist in rectangles for item in sublist] 
+
+	# define prev_rectangles to store previous detected rectangles
+	global prev_rectangles
+
+	# add new detections to the prev_rectangles
+	if len(rectangles) > 0:
+		prev_rectangles.append(rectangles)
+		if len(prev_rectangles) > 10:
+			# remove the oldest 10 rectangles in the list 
+			prev_rectangles = prev_rectangles[len(prev_rectangles) - 10:]
+
+	heatmap_img = np.zeros_like(img[:,:,0])
+
+	for rect in prev_rectangles:
+		heatmap_img = add_heat(heatmap_img, rect)
+		heatmap_img = apply_threshold(heatmap_img, 2)
+	# label the heatmap
+	labels = label(heatmap_img)
+	# draw bounding box on original image
+	draw_img, rect = draw_labeled_bboxes(np.copy(img), labels)
+	return draw_img
+
+
+
 if __name__ == '__main__':
 	# load raw data set
 	car_images, noncar_images = load_training_data()
+
+	prev_rectangles=[]
 
 	########################################
 	# uncomment this part for visualization 
@@ -280,115 +366,17 @@ if __name__ == '__main__':
 
 	# prepare training and testing data
 	X_train, X_test, y_train, y_test = construct_data_set(car_images, noncar_images, colorspace='YUV', orient=9, pix_per_cell=8, cell_per_block=2, hog_channel='ALL')
-	# mark the start of training time 
-	t = time.time()
 	svc = train_classifier(X_train, y_train)
-	# mark the stop of training time 
-	t2 = time.time()
-	# show the training time
-	print(round(t2-t, 2), 'seconds to train the SVC.')
-	# show the accuracy score of the SVC
-	print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
-	# show the prediction time for a single image
-	t=time.time()
-	n_predict = 10
-	print('For these', n_predict, 'labels: ', y_test[0:n_predict])
-	print('SVC predicts: ', svc.predict(X_test[0:n_predict]))
 
-	t2 = time.time()
-	print(round(t2-t, 5), 'seconds to predict', n_predict,'labels with SVC')
+	cap = cv2.VideoCapture('test_video.mp4')
 
-
-	test_img = mpimg.imread('./test_images/test6.jpg')
-
-
-	colorspace = 'YUV' # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
-	orient = 9
-	pix_per_cell = 8
-	cell_per_block = 2
-	hog_channel = 'ALL'
-
-	rectangles = []
-
-
-	ystart = 400
-	ystop = 464
-	scale = 1.0
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 416
-	ystop = 480
-	scale = 1.0
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 400
-	ystop = 496
-	scale = 1.5
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 432
-	ystop = 528
-	scale = 1.5
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 400
-	ystop = 528
-	scale = 2.0
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 432
-	ystop = 560
-	scale = 2.0
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 400
-	ystop = 596
-	scale = 3.5
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-	ystart = 464
-	ystop = 660
-	scale = 3.5
-	rectangles.append(detect_cars(test_img, ystart, ystop, scale, colorspace, hog_channel, svc, None, 
-	                       orient, pix_per_cell, cell_per_block, None, None))
-
-	# apparently this is the best way to flatten a list of lists
-	rectangles = [item for sublist in rectangles for item in sublist] 
-	test_img_rects = draw_boxes(test_img, rectangles, color=(100, 200, 50), thick=2)
-
-	plt.figure(figsize=(10,5))
-	plt.imshow(test_img_rects)
-
-	plt.show()
-	# print('Number of boxes: ', len(rectangles))
-
-
-	# Test out the heatmap
-	heatmap_img = np.zeros_like(test_img[:,:,0])
-	heatmap_img = add_heat(heatmap_img, rectangles)
-	plt.figure(figsize=(10,5))
-	plt.imshow(heatmap_img, cmap='hot')
-	plt.show()
-
-	heatmap_img = apply_threshold(heatmap_img, 1)
-	plt.figure(figsize=(10,5))
-	plt.imshow(heatmap_img, cmap='hot')
-	plt.show()
-
-
-	labels = label(heatmap_img)
-	plt.figure(figsize=(10,5))
-	plt.imshow(labels[0], cmap='gray')
-	print(labels[1], 'cars found')
-	plt.show()
-
-
-	# Draw bounding boxes on a copy of the image
-	draw_img, rect = draw_labeled_bboxes(np.copy(test_img), labels)
-	# Display the image
-	plt.figure(figsize=(10,5))
-	plt.imshow(draw_img)
-	plt.show()
+	while(cap.isOpened()):
+		ret, frame = cap.read()
+		if ret == True:
+			img_out = process_pipeline(frame)
+			cv2.imshow('image', img_out)
+			if cv2.waitKey(1) & 0xFF == ord('q'):
+				break
 
 
 
