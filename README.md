@@ -36,7 +36,7 @@ Rubric Points
 
 ## Explain how (and identify where in your code) you extracted HOG features from the training images. Explain how you settled on your final choice of HOG parameters.
 
-Step 1. Load all of the car and non-car image paths from the provided dataset. The figure below shows 8 sample images for each class.
+Step 1. Load all of the car and non-car image paths from the provided dataset. The figure below shows 8 sample images for each class. This is done by `visualize_training_data` function.
 
 ![alt text][image1]
 
