@@ -24,8 +24,8 @@ The goals / steps of this project are the following:
 [image7]: ./examples/threshold_heat_map.png
 [image8]: ./examples/label.png
 [image9]: ./examples/final_result.png
-[image8]: ./examples/label.png
-[image8]: ./examples/label.png
+[image10]: ./examples/ezgif.com-video-to-gif.gif
+[image11]: ./examples/ezgif.com-video-to-gif-2.png
 
 
 Rubric Points
@@ -127,7 +127,28 @@ Finally, we plot the bounding box based on the labeled data.
 
 ![alt text][image9]
 
+# Video Implementation
 
+## Provide a link to your final video output. Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
+
+![alt text][image10]
+![alt text][image11]
+
+## Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
+
+The entire pipeline is in `detect_cars` function. To reduce false positve, I have done below things:
+
+1. Apply threshold to heatmap
+2. Introduce `prev_rectangles` to current heatmap
+3. Draw bounding box based on the labeled data as apposed to all rectangles.
+
+## Briefly discuss any problems / issues you faced in your implementation of this project. Where will your pipeline likely fail? What could you do to make it more robust?
+
+1. Before use `prev_rectangles`, I have a lot of false positives
+2. The training data has more than 99% accuracy for the test data set. However, it doesn't achieve that high accuracy for the video data. Maybe due to brightness or resolution differences.
+3. The performance is still very slow, even given that I only searched the bottom area.
+4. The searching block is not adaptive, so the bounding box is not very accurate.
+5. I probabaly can try the Yolo network to compare the performance.
 
 
 
