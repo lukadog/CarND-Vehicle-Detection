@@ -142,8 +142,7 @@ def train_classifier(X_train, y_train):
 	return svc
 
 
-def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, orient, 
-	pix_per_cell, cell_per_block):
+def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, orient, pix_per_cell, cell_per_block):
 	# define an array of rectangles where cars were detected
 	rectangles = []
 	img = img.astype(np.float32)/255
@@ -220,18 +219,14 @@ def detect_cars(img, ystart, ystop, scale, cspace, hog_channel, svc, orient,
 
 
 def draw_boxes(img, bboxes, color=(0, 255, 0), thick=3):
-	# Make a copy of the image
-	imcopy = np.copy(img)
-	random_color = False
-	# Iterate through the bounding boxes
+	# make a copy of the image
+	box_image = np.copy(img)
+	# iterate through the bounding boxes
 	for bbox in bboxes:
-		if color == 'random' or random_color:
-			color = (np.random.randint(0,255), np.random.randint(0,255), np.random.randint(0,255))
-			random_color = True
 		# draw a rectangle given bbox coordinates
 		cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
 	# return the image with bounding box 
-	return imcopy
+	return box_image
 
 
 def add_heat(heatmap, bbox_list):
@@ -246,24 +241,21 @@ def apply_threshold(heatmap, threshold):
 	# Return thresholded map
 	return heatmap
 
-
 def draw_labeled_bboxes(img, labels):
     # Iterate through all detected cars
     rects = []
     for car_number in range(1, labels[1]+1):
-        # Find pixels with each car_number label value
+        # find pixels with each car_number label value
         nonzero = (labels[0] == car_number).nonzero()
-        # Identify x and y values of those pixels
+        # identify x and y values of those pixels
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
-        # Define a bounding box based on min/max x and y
+        # define a bounding box based on min/max x and y
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
         rects.append(bbox)
-        # Draw the box on the image
+        # draw the bounding box on the image
         cv2.rectangle(img, bbox[0], bbox[1], (0,255,0), 3)
-    # Return the image and final rectangles
     return img, rects
-
 
 def process_pipeline(img):
 	# define pipeline parameters
@@ -332,19 +324,20 @@ def process_pipeline(img):
 	# add new detections to the prev_rectangles
 	if len(rectangles) > 0:
 		prev_rectangles.append(rectangles)
-		if len(prev_rectangles) > 10:
+		if len(prev_rectangles) > 20:
 			# remove the oldest 10 rectangles in the list 
-			prev_rectangles = prev_rectangles[len(prev_rectangles) - 10:]
+			prev_rectangles = prev_rectangles[len(prev_rectangles) - 20:]
 
 	heatmap_img = np.zeros_like(img[:,:,0])
 
 	for rect in prev_rectangles:
 		heatmap_img = add_heat(heatmap_img, rect)
-		heatmap_img = apply_threshold(heatmap_img, 2)
+		heatmap_img = apply_threshold(heatmap_img, 1)
 	# label the heatmap
 	labels = label(heatmap_img)
 	# draw bounding box on original image
 	draw_img, rect = draw_labeled_bboxes(np.copy(img), labels)
+	
 	return draw_img
 
 
@@ -365,10 +358,11 @@ if __name__ == '__main__':
 	# visualize_hog_image(nocar_img)
 
 	# prepare training and testing data
+
 	X_train, X_test, y_train, y_test = construct_data_set(car_images, noncar_images, colorspace='YUV', orient=9, pix_per_cell=8, cell_per_block=2, hog_channel='ALL')
 	svc = train_classifier(X_train, y_train)
 
-	cap = cv2.VideoCapture('test_video.mp4')
+	cap = cv2.VideoCapture('project_video.mp4')
 
 	while(cap.isOpened()):
 		ret, frame = cap.read()
