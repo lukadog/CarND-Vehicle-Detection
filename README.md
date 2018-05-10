@@ -25,7 +25,7 @@ The goals / steps of this project are the following:
 [image8]: ./examples/label.png
 [image9]: ./examples/final_result.png
 [image10]: ./examples/ezgif.com-video-to-gif.gif
-[image11]: ./examples/ezgif.com-video-to-gif-2.png
+[image11]: ./examples/ezgif.com-video-to-gif-2.gif
 
 
 Rubric Points
