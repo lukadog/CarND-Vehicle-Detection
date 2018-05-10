@@ -19,7 +19,7 @@ The goals / steps of this project are the following:
 [image2]: ./examples/car_hog.png
 [image3]: ./examples/no_car_hog.png
 [image4]: ./examples/search_area.png
-[image5]: ./examples/search_area.png
+[image5]: ./examples/combined_search_result.png
 [image5]: ./examples/visualize_training_data.png
 [image5]: ./examples/visualize_training_data.png
 [image5]: ./examples/visualize_training_data.png
@@ -93,13 +93,13 @@ Step 1. The HOG features are extracted for the entire image and subsampled accor
 
 Step 2. Classifier makes prediction on the HOG features for each window and returns a list of rectangle coordinates that are predicted to have a car.
 
-Step 3. Several different window sizes with various overlaps are applied. Below figure shows the search area of all windows:
+Step 3. Several different window sizes with various overlaps are applied. Scales tried: small 1x, 1.5x, 2x and 3.5x. Window overlap was set to 50% in X direction and 75% in Y directions. Below figure shows the search area of all windows:
 
 ![alt text][image4]
 
+Step 4. The figure below shows the final result returned by `detect_cars` with different rectangle sizes. 
 
-The figure below shows the first attempt at using `find_cars` on one of the test images, using a single window size:
-
+![alt text][image5]
 
 
 
