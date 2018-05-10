@@ -144,11 +144,11 @@ The entire pipeline is in `detect_cars` function. To reduce false positve, I hav
 
 ## Briefly discuss any problems / issues you faced in your implementation of this project. Where will your pipeline likely fail? What could you do to make it more robust?
 
-1. Before use `prev_rectangles`, I have a lot of false positives
-2. The training data has more than 99% accuracy for the test data set. However, it doesn't achieve that high accuracy for the video data. Maybe due to brightness or resolution differences.
-3. The performance is still very slow, even given that I only searched the bottom area.
-4. The searching block is not adaptive, so the bounding box is not very accurate.
-5. I probabaly can try the Yolo network to compare the performance.
+1. Before use `prev_rectangles`, I have a lot of false positives. By introducing the previous detections to the next frame, the detection is more consistent and false positve reduces.
+2. The training data has more than 99% accuracy for the test data set. However, it doesn't seem to achieve that high accuracy for the video data. Maybe due to brightness or resolution differences.
+3. The performance is still very slow, the out put video is sort of sluggish. I can fine tune the search area to make the searching more efficient.
+4. The searching blocks are still fixed sizes (though they are of different sizes), so the bounding box is not very accurate.
+5. I am planning to try Yolo network to compare the performance.
 
 
 
