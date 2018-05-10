@@ -20,9 +20,12 @@ The goals / steps of this project are the following:
 [image3]: ./examples/no_car_hog.png
 [image4]: ./examples/search_area.png
 [image5]: ./examples/combined_search_result.png
-[image5]: ./examples/visualize_training_data.png
-[image5]: ./examples/visualize_training_data.png
-[image5]: ./examples/visualize_training_data.png
+[image6]: ./examples/heat_map.png
+[image7]: ./examples/threshold_heat_map.png
+[image8]: ./examples/label.png
+[image9]: ./examples/final_result.png
+[image8]: ./examples/label.png
+[image8]: ./examples/label.png
 
 
 Rubric Points
@@ -89,17 +92,41 @@ Note: no color information is used as I don't believe it's correlated to car fea
 
 The sliding window search is implemented in `detect_cars` function. 
 
-Step 1. The HOG features are extracted for the entire image and subsampled according to the size of the window and then fed to the classifier.
+Step 1. The HOG features are extracted for image and fed to the classifier.
 
 Step 2. Classifier makes prediction on the HOG features for each window and returns a list of rectangle coordinates that are predicted to have a car.
 
-Step 3. Several different window sizes with various overlaps are applied. Scales tried: small 1x, 1.5x, 2x and 3.5x. Window overlap was set to 50% in X direction and 75% in Y directions. Below figure shows the search area of all windows:
+Step 3. Several different scales (1x, 1.5x, 2x and 3.5x) with various overlaps are applied. 
+
+Below figure shows the search area of all windows:
 
 ![alt text][image4]
 
 Step 4. The figure below shows the final result returned by `detect_cars` with different rectangle sizes. 
 
 ![alt text][image5]
+
+
+## Show some examples of test images to demonstrate how your pipeline is working. How did you optimize the performance of your classifier?
+
+First step is searching and predicting. To optimize the performance, we only search the area of the pavement. The results are shown in above figures.
+
+After we have the rectangles, we generate heatmaps by adding 1 to the blocks inside the rectangles. To remove false positive (or false negative), we store the rectangles detected from the previous frame in `prev_rectangles` and let it contribute to the next frame. 
+
+![alt text][image6]
+
+Then we do thresholding based on the heatmap value.
+
+![alt text][image7]
+
+Then we label the data.
+
+![alt text][image8]
+
+Finally, we plot the bounding box based on the labeled data.
+
+![alt text][image9]
+
 
 
 
